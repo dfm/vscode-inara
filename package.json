@@ -4,11 +4,26 @@
   "description": "Tools to work with JOSS & JOSE publishing artifacts in VSCode",
   "icon": "icons/icon.png",
   "version": "0.0.1",
+  "publisher": "dfm",
+  "license": "MIT",
+  "homepage": "https://github.com/dfm/vscode-inara",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dfm/vscode-inara.git"
+  },
   "engines": {
     "vscode": "^1.82.0"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "inara",
+    "joss",
+    "jose",
+    "pandoc",
+    "software",
+    "publishing"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -82,7 +97,8 @@
     "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "deploy": "vsce publish --yarn"
+    "prerelease": "vsce publish --yarn --pre-release",
+    "release": "vsce publish --yarn"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.1",
