@@ -143,7 +143,6 @@ function _fixBibliography(editor: vscode.TextEditor) {
 	}
 	const text = document.getText(selection);
 	const updated = fixAstroJournalMacros(text);
-	console.log(updated);
 	editor.edit(editBuilder => {
 		editBuilder.replace(selection, updated);
 	});
