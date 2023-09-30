@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
-import { resolve, basename, dirname } from 'path';
-import { existsSync } from 'fs';
+import * as path from 'path';
 import { spawn } from 'child_process';
+import { findBibliography, findPaperMarkdown } from './files';
+import { fixAstroJournalMacros, MAPPINGS } from './bib';
 
 // The path to the local checkout of the inara repository. This includes all the
 // resources needed to build the PDF.
-const inaraRoot = resolve(`${__dirname}/../inara`);
+const inaraRoot = path.resolve(`${__dirname}/../inara`);
 
 // This status bar item used to display the build status
 let _statusBarItem: vscode.StatusBarItem;
@@ -27,44 +28,13 @@ function getOutputChannel(): vscode.OutputChannel {
 	return _channel;
 }
 
-// Functions to find a 'paper.md' file within this workspace. It will return the
-// current file if it is called 'paper.md', otherwise it will search for the
-// first 'paper.md' returned by 'vscode.workspace.findFiles'. What happens if
-// there are multiple 'paper.md' files in the workspace? I don't know if the
-// results are deterministic!
-async function _findPaperMarkdown() {
-	if (vscode.window.activeTextEditor) {
-		const currentDoc = vscode.window.activeTextEditor.document.uri;
-		if (basename(currentDoc.path) === 'paper.md') {
-			return currentDoc;
-		}
-	}
-	const uris = await vscode.workspace.findFiles("**/paper.md", null, 1);
-	if (uris.length > 0) {
-		return uris[0];
-	}
-}
-
-async function findPaperMarkdown() {
-	let paper = await _findPaperMarkdown();
-	if (!paper) {
-		vscode.window.showErrorMessage('Inara: No paper.md file found in the workspace.');
-		return;
-	}
-	if (paper.scheme !== 'file') {
-		vscode.window.showErrorMessage('Inara: The paper.md file must be local.');
-		return;
-	}
-	return paper;
-}
-
 // This is the main function for building the PDF using pandoc and inara.
 async function _build(fmt: string) {
 	const paper = await findPaperMarkdown();
 	if (!paper) {
 		return;
 	}
-	const paperDir = dirname(paper.fsPath);
+	const paperDir = path.dirname(paper);
 	const artifact = fmt === "preprint" ? `${paperDir}/paper.${fmt}.tex` : `${paperDir}/paper.${fmt}`;
 
 	// Get the configuration settings for this extension.
@@ -85,13 +55,13 @@ async function _build(fmt: string) {
 		`--metadata=article-info-file='${inaraRoot}/resources/default-article-info.yaml'`,
 		`--variable=${journal}`,
 		`--output='${artifact}'`,
-		`'${paper.fsPath}'`
+		`'${paper}'`
 	];
 
 	// Set up the output channel for this extension and echo the command line.
 	const outputChannel = getOutputChannel();
 	outputChannel.clear();
-	outputChannel.append(`Building ${paper.fsPath} with command:\n`);
+	outputChannel.append(`Building ${paper} with command:\n`);
 	outputChannel.append(`'${pandoc}' ${args.join(' ')}\n\nOutput:\n\n`);
 
 	// The status bar will display the current state of the build.
@@ -152,6 +122,33 @@ function displayLogs() {
 	getOutputChannel().show();
 }
 
+// Fix any astronomy journal references in the bibliography.
+async function fixBibliography() {
+	const editor = vscode.window.activeTextEditor;
+	if (!editor || !editor.document || path.extname(editor.document.fileName) !== '.bib') {
+		const bib = await findBibliography();
+		if (bib) {
+			vscode.window.showTextDocument(vscode.Uri.file(bib)).then(_fixBibliography);
+		}
+		return;
+	}
+	_fixBibliography(editor);
+}
+
+function _fixBibliography(editor: vscode.TextEditor) {
+	const document = editor.document;
+	let selection: vscode.Selection | vscode.Range = editor.selection;
+	if (selection.isEmpty) {
+		selection = new vscode.Range(document.lineAt(0).range.start, document.lineAt(document.lineCount - 1).range.end);
+	}
+	const text = document.getText(selection);
+	const updated = fixAstroJournalMacros(text);
+	console.log(updated);
+	editor.edit(editBuilder => {
+		editBuilder.replace(selection, updated);
+	});
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('inara.buildPDF', async () => _build('pdf')));
 	context.subscriptions.push(vscode.commands.registerCommand('inara.buildJATS', async () => _build('jats')));
@@ -160,6 +157,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('inara.buildCFF', async () => _build('cff')));
 	context.subscriptions.push(vscode.commands.registerCommand('inara.buildPreprint', async () => _build('preprint')));
 	context.subscriptions.push(vscode.commands.registerCommand('inara.displayLogs', displayLogs));
+	context.subscriptions.push(vscode.commands.registerCommand('inara.fixBibliography', fixBibliography));
 }
 
 export function deactivate() { }
