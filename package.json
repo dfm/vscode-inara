@@ -3,7 +3,7 @@
   "displayName": "Inara",
   "description": "Tools to work with JOSS & JOSE publishing artifacts in VSCode",
   "icon": "icons/icon.png",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "dfm",
   "license": "MIT",
   "homepage": "https://github.com/dfm/vscode-inara",
