@@ -3,7 +3,7 @@
   "displayName": "Inara",
   "description": "Tools to work with JOSS & JOSE publishing artifacts in VSCode",
   "icon": "icons/icon.png",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "dfm",
   "license": "MIT",
   "homepage": "https://github.com/dfm/vscode-inara",
@@ -98,7 +98,7 @@
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
     "check": "vsce package --yarn",
-    "prerelease": "vsce publish --yarn --pre-release",
+    "candidate": "vsce publish --yarn --pre-release",
     "release": "vsce publish --yarn"
   },
   "devDependencies": {
