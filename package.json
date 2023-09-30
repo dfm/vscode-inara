@@ -19,8 +19,28 @@
         "category": "Inara"
       },
       {
-        "command": "inara.displayPDF",
-        "title": "Display PDF",
+        "command": "inara.buildJATS",
+        "title": "Build JATS",
+        "category": "Inara"
+      },
+      {
+        "command": "inara.buildCrossref",
+        "title": "Build Crossref",
+        "category": "Inara"
+      },
+      {
+        "command": "inara.buildCFF",
+        "title": "Build CFF",
+        "category": "Inara"
+      },
+      {
+        "command": "inara.buildPreprint",
+        "title": "Build Preprint",
+        "category": "Inara"
+      },
+      {
+        "command": "inara.buildHTML",
+        "title": "Build HTML",
         "category": "Inara"
       },
       {

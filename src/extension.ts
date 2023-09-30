@@ -59,11 +59,13 @@ async function findPaperMarkdown() {
 }
 
 // This is the main function for building the PDF using pandoc and inara.
-async function buildPDF() {
-	let paper = await findPaperMarkdown();
+async function _build(fmt: string) {
+	const paper = await findPaperMarkdown();
 	if (!paper) {
 		return;
 	}
+	const paperDir = dirname(paper.fsPath);
+	const artifact = fmt === "preprint" ? `${paperDir}/paper.${fmt}.tex` : `${paperDir}/paper.${fmt}`;
 
 	// Get the configuration settings for this extension.
 	const pandoc = vscode.workspace.getConfiguration("inara").get("pandoc", "pandoc");
@@ -77,12 +79,12 @@ async function buildPDF() {
 	const args = [
 		`--data-dir='${inaraRoot}/data'`,
 		`--defaults=shared`,
-		`--defaults='${inaraRoot}/data/defaults/pdf.yaml'`,
+		`--defaults='${inaraRoot}/data/defaults/${fmt}.yaml'`,
 		`--defaults='${inaraRoot}/resources/${journal}/defaults.yaml'`,
-		`--resource-path='${inaraRoot}':'${inaraRoot}/resources':'${dirname(paper.path)}'`,
+		`--resource-path='${inaraRoot}':'${inaraRoot}/resources':'${paperDir}'`,
 		`--metadata=article-info-file='${inaraRoot}/resources/default-article-info.yaml'`,
 		`--variable=${journal}`,
-		`--output='${dirname(paper.fsPath)}/paper.pdf'`,
+		`--output='${artifact}'`,
 		`'${paper.fsPath}'`
 	];
 
@@ -97,7 +99,15 @@ async function buildPDF() {
 	statusBarItem.show();
 
 	// Spawn the pandoc process.
-	const proc = spawn(`'${pandoc}'`, args, { shell: true });
+	const proc = spawn(
+		`'${pandoc}'`,
+		args,
+		{
+			shell: true,
+			// eslint-disable-next-line @typescript-eslint/naming-convention
+			env: { ...process.env, INARA_ARTIFACTS_PATH: paperDir }
+		}
+	);
 
 	// Stdout and stderr are both sent to the output channel.
 	proc.stdout.setEncoding("utf8");
@@ -114,20 +124,20 @@ async function buildPDF() {
 		statusBarItem.hide();
 		if (code === 0) {
 			outputChannel.append("\nBuild succeeded.\n");
-			vscode.window.showInformationMessage("Inara: Build succeeded.", "Show PDF", "Show Logs")
+			vscode.window.showInformationMessage("Inara: Build succeeded.", "Open Artifact", "Open Logs")
 				.then((choice) => {
-					if (choice === "Show PDF") {
-						displayPDF(paper);
-					} else if (choice === "Show Logs") {
+					if (choice === "Open Artifact") {
+						vscode.commands.executeCommand('vscode.open', vscode.Uri.file(`${artifact}`));
+					} else if (choice === "Open Logs") {
 						displayLogs();
 					}
 				});
 		} else {
 			const message = `Build failed with error code ${code}.`;
 			outputChannel.append(`\n${message}\n`);
-			vscode.window.showErrorMessage(`Inara: ${message}`, "Show Logs")
+			vscode.window.showErrorMessage(`Inara: ${message}`, "Open Logs")
 				.then((choice) => {
-					if (choice === "Show Logs") {
+					if (choice === "Open Logs") {
 						displayLogs();
 					}
 				});
@@ -137,30 +147,18 @@ async function buildPDF() {
 	return proc;
 }
 
-// This function will display the PDF corresponding to the current paper.md file.
-async function displayPDF(paper?: vscode.Uri) {
-	if (!paper) {
-		paper = await findPaperMarkdown();
-		if (!paper) {
-			return;
-		}
-	}
-	const pdf = `${dirname(paper.fsPath)}/paper.pdf`;
-	if (!existsSync(pdf)) {
-		vscode.window.showErrorMessage(`Inara: No corresponding PDF found for ${paper.fsPath}.`);
-		return;
-	}
-	vscode.commands.executeCommand('vscode.open', vscode.Uri.file(pdf));
-}
-
 // This function will display the build logs.
 function displayLogs() {
 	getOutputChannel().show();
 }
 
 export function activate(context: vscode.ExtensionContext) {
-	context.subscriptions.push(vscode.commands.registerCommand('inara.buildPDF', buildPDF));
-	context.subscriptions.push(vscode.commands.registerCommand('inara.displayPDF', displayPDF));
+	context.subscriptions.push(vscode.commands.registerCommand('inara.buildPDF', async () => _build('pdf')));
+	context.subscriptions.push(vscode.commands.registerCommand('inara.buildJATS', async () => _build('jats')));
+	context.subscriptions.push(vscode.commands.registerCommand('inara.buildHTML', async () => _build('html')));
+	context.subscriptions.push(vscode.commands.registerCommand('inara.buildCrossref', async () => _build('crossref')));
+	context.subscriptions.push(vscode.commands.registerCommand('inara.buildCFF', async () => _build('cff')));
+	context.subscriptions.push(vscode.commands.registerCommand('inara.buildPreprint', async () => _build('preprint')));
 	context.subscriptions.push(vscode.commands.registerCommand('inara.displayLogs', displayLogs));
 }
 
