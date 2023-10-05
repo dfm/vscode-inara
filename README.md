@@ -9,9 +9,11 @@ JOSS and JOSE publishing artifacts.
 
 ## Requirements
 
-Start by installing [Pandoc](https://pandoc.org). If it is discoverable on you
-system's `PATH`, you shouldn't need to do anything else, but you can also
-provide the path to a custom `pandoc` executable in the extension settings.
+To use this extension, you'll need to install [Pandoc](https://pandoc.org) and,
+if you want to generate PDFs, a LaTeX distribution (e.g. [TeX
+Live](https://www.tug.org/texlive) or [TinyTeX](https://yihui.org/tinytex)). If
+`pandoc` is not discoverable on your `PATH`, you can provide a custom executable
+using the `inara.pandoc` configuration variable.
 
 ## Features
 
